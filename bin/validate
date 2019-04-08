@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+workspace=${HOME}/workspace
+statedir=${workspace}/deployments/vbox/state
+
+bosh interpolate ${workspace}/bosh-deployment/bosh.yml \
+  -o ${workspace}/bosh-deployment/virtualbox/cpi.yml \
+  -o ${workspace}/bosh-deployment/virtualbox/outbound-network.yml \
+  -o ${workspace}/bosh-deployment/bosh-lite.yml \
+  -o ${workspace}/bosh-deployment/bosh-lite-runc.yml \
+  -o ${workspace}/bosh-deployment/uaa.yml \
+  -o ${workspace}/bosh-deployment/credhub.yml \
+  -o ${workspace}/bosh-deployment/jumpbox-user.yml \
+  --var-file director_certificate.certificate=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}-0001/cert.pem \
+  --var-file director_certificate.private_key=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}-0001/privkey.pem \
+  --var-file director_certificate.ca=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}-0001/chain.pem \
+  --var-file director_chained_certificate.certificate=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}-0001/fullchain.pem \
+  --var-file chained_ca_certificate.certificate=<(cat /usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}-0001/chain.pem /usr/local/etc/certbot/isrgrootx1.pem)\
+  --var-file root_certificate.certificate=/usr/local/etc/certbot/isrgrootx1.pem \
+  --vars-store ${statedir}/creds.yml \
+  -v director_name=bosh-lite \
+  -v director_hostname=bosh.${LOCAL_SUBDOMAIN} \
+  -v internal_ip=192.168.50.6 \
+  -v internal_gw=192.168.50.1 \
+  -v internal_cidr=192.168.50.0/24 \
+  -v outbound_network_name=BoshNetwork
+
+#   -o ${workspace}/bosh-operations/tls-redux.yml \

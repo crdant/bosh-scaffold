@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+BASEDIR=$(dirname $(dirname $0))
+state_dir=${BASEDIR}/state
+patch_dir=${BASEDIR}/patches
+workspace=${HOME}/workspace
+
+bosh create-env ${workspace}/bosh-deployment/bosh.yml \
+  --state ${state_dir}/state.json \
+  -o ${workspace}/bosh-deployment/virtualbox/cpi.yml \
+  -o ${workspace}/bosh-deployment/virtualbox/outbound-network.yml \
+  -o ${workspace}/bosh-deployment/bosh-lite.yml \
+  -o ${workspace}/bosh-deployment/bosh-lite-runc.yml \
+  -o ${workspace}/bosh-deployment/uaa.yml \
+  -o ${workspace}/bosh-deployment/credhub.yml \
+  -o ${workspace}/bosh-deployment/jumpbox-user.yml \
+  --var-file director_certificate.certificate=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/cert.pem \
+  --var-file director_certificate.private_key=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/privkey.pem \
+  --var-file director_certificate.ca=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/chain.pem \
+  --var-file director_chained_certificate.certificate=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/fullchain.pem \
+  --var-file chained_ca_certificate.certificate=<(cat /usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/chain.pem /usr/local/etc/certbot/isrgrootx1.pem) \
+  --var-file root_certificate.certificate=/usr/local/etc/certbot/isrgrootx1.pem \
+  --vars-store ${state_dir}/creds.yml \
+  -v director_name=bosh-lite \
+  -v director_hostname=bosh.${LOCAL_SUBDOMAIN} \
+  -v internal_ip=192.168.50.6 \
+  -v internal_gw=192.168.50.1 \
+  -v internal_cidr=192.168.50.0/24 \
+  -v outbound_network_name=BoshNetwork
+
+bosh interpolate -o ${patch_dir}/add-large-disk-to-cloud-config.yml ${workspace}/bosh-deployment/warden/cloud-config.yml  \
+  | bosh -e 192.168.50.6 --ca-cert <(bosh int ${state_dir}/creds.yml --path /director_ssl/ca) -n update-cloud-config -
+
+if [ -f ${state_dir}/id_jumpbox ] ; then
+  chmod 600 ${state_dir}/id_jumpbox
+fi
+
+bosh int ${state_dir}/creds.yml --path /jumpbox_ssh/private_key > ${state_dir}/id_jumpbox
+chmod 400 ${state_dir}/id_jumpbox
+
+bosh int ${state_dir}/creds.yml --path /credhub_tls/ca > ${state_dir}/credhub_ca_cert
+bosh int ${state_dir}/creds.yml --path /director_ssl/ca > ${state_dir}/director_ca_cert

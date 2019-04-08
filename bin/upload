@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+BASEDIR=$(dirname $(dirname $0))
+state_dir=${BASEDIR}/state
+patch_dir=${BASEDIR}/patches
+workspace=${HOME}/workspace
+
+deployment="${1}"
+if [ -z "$deployment" ]; then
+  echo "Usage: $(basename $0) <deployment>"
+  exit 1
+fi
+
+deployment_dir="${BASEDIR}/${deployment}"
+if [ ! -d "${deployment_dir}" ]; then
+  echo "The specified deployment directory does not exist."
+  exit 1
+fi
+
+for release in ${deployment_dir}/*release*; do
+  bosh upload-release $release
+done
+
+for stemcell in ${deployment_dir}/*stemcell*warden*; do
+  bosh upload-stemcell $stemcell
+done
