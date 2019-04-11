@@ -23,3 +23,12 @@ credhub login --server https://${BOSH_ENVIRONMENT}:8844 \
 credhub import --file ${deployment_dir}/secrets.yml > /dev/null
 
 bosh -n deploy -d ${deployment} --vars-file ${deployment_dir}/vars.yml ${deployment_dir}/manifest.yml
+
+# make it so that you always hit this deployment if you're in it's directory
+
+if [ ! -f "${deployment_dir}/.envrc" ]; then
+  cat <<ENVRC
+export BOSH_DEPLOYMENT=control-plane
+source_up
+ENVRC
+fi
