@@ -27,6 +27,12 @@ bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   -v internal_cidr=192.168.50.0/24 \
   -v outbound_network_name=BoshNetwork
 
+sudo route add -net 10.244.0.0/16 192.168.50.6
+
+# add BOSH DNS
+bosh update-runtime-config ~/workspace/bosh-deployment/runtime-configs/dns.yml
+
+# update cloud config with a bigger disk option (useful for concourse)
 bosh interpolate -o ${patch_dir}/add-large-disk-to-cloud-config.yml ${workspace}/bosh-deployment/warden/cloud-config.yml  \
   | bosh -e 192.168.50.6 --ca-cert <(bosh int ${state_dir}/creds.yml --path /director_ssl/ca) -n update-cloud-config -
 
