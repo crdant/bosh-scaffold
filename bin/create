@@ -4,6 +4,10 @@ state_dir=${BASEDIR}/state
 patch_dir=${BASEDIR}/patches
 workspace=${HOME}/workspace
 
+internal_ip=$(dig bosh.${LOCAL_SUBDOMAIN} +short)
+interal_gw=$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Usable range" | awk '{print $4}')
+interal_cidr="$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Network address" | awk '{print $4}')/24"
+
 bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   --state ${state_dir}/state.json \
   -o ${workspace}/bosh-deployment/virtualbox/cpi.yml \
@@ -13,6 +17,8 @@ bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   -o ${workspace}/bosh-deployment/uaa.yml \
   -o ${workspace}/bosh-deployment/credhub.yml \
   -o ${workspace}/bosh-deployment/jumpbox-user.yml \
+  -o ${patch_dir}/add-trusted-certificates-to-director.yml \
+  --var-file letsencrypt_root=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/chain.pem \
   --var-file director_certificate.certificate=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/cert.pem \
   --var-file director_certificate.private_key=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/privkey.pem \
   --var-file director_certificate.ca=/usr/local/etc/certbot/live/bosh.${LOCAL_SUBDOMAIN}/chain.pem \
@@ -22,26 +28,29 @@ bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   --vars-store ${state_dir}/creds.yml \
   -v director_name=bosh-lite \
   -v director_hostname=bosh.${LOCAL_SUBDOMAIN} \
-  -v internal_ip=192.168.50.6 \
-  -v internal_gw=192.168.50.1 \
-  -v internal_cidr=192.168.50.0/24 \
+  -v internal_ip=${interal_ip} \
+  -v internal_gw=${interal_gw}\
+  -v internal_cidr=${internal_cidr} \
   -v outbound_network_name=BoshNetwork
 
-sudo route add -net 10.244.0.0/16 192.168.50.6
+if [[ $? -eq 0 ]]; then
+  direnv allow
+  sudo route add -net 10.244.0.0/16 ${internal_ip}
 
-# add BOSH DNS
-bosh update-runtime-config ~/workspace/bosh-deployment/runtime-configs/dns.yml
+  if [ -f ${state_dir}/id_jumpbox ] ; then
+    chmod 600 ${state_dir}/id_jumpbox
+  fi
 
-# update cloud config with a bigger disk option (useful for concourse)
-bosh interpolate -o ${patch_dir}/add-large-disk-to-cloud-config.yml ${workspace}/bosh-deployment/warden/cloud-config.yml  \
-  | bosh -e 192.168.50.6 --ca-cert <(bosh int ${state_dir}/creds.yml --path /director_ssl/ca) -n update-cloud-config -
+  bosh int ${state_dir}/creds.yml --path /jumpbox_ssh/private_key > ${state_dir}/id_jumpbox
+  chmod 400 ${state_dir}/id_jumpbox
 
-if [ -f ${state_dir}/id_jumpbox ] ; then
-  chmod 600 ${state_dir}/id_jumpbox
+  bosh int ${state_dir}/creds.yml --path /credhub_tls/ca > ${state_dir}/credhub_ca_cert
+  bosh int ${state_dir}/creds.yml --path /director_ssl/ca > ${state_dir}/director_ca_cert
+
+  # add BOSH DNS
+  bosh update-runtime-config ~/workspace/bosh-deployment/runtime-configs/dns.yml
+
+  # update cloud config with a bigger disk option (useful for concourse)
+  bosh interpolate -o ${patch_dir}/add-large-disk-to-cloud-config.yml ${workspace}/bosh-deployment/warden/cloud-config.yml  \
+    | bosh --ca-cert <(bosh int ${state_dir}/creds.yml --path /director_ssl/ca) -n update-cloud-config -
 fi
-
-bosh int ${state_dir}/creds.yml --path /jumpbox_ssh/private_key > ${state_dir}/id_jumpbox
-chmod 400 ${state_dir}/id_jumpbox
-
-bosh int ${state_dir}/creds.yml --path /credhub_tls/ca > ${state_dir}/credhub_ca_cert
-bosh int ${state_dir}/creds.yml --path /director_ssl/ca > ${state_dir}/director_ca_cert
