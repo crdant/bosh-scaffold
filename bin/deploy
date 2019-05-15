@@ -16,13 +16,19 @@ if [ ! -d "${deployment_dir}" ]; then
   exit 1
 fi
 
-credhub login --server https://${BOSH_ENVIRONMENT}:8844 \
-  --username credhub_cli_user \
-  --password $(bosh interpolate ${state_dir}/creds.yml --path /credhub_cli_user_password) \
-  --skip-tls-validation
-credhub import --file ${deployment_dir}/secrets.yml > /dev/null
+if [ -f "${deployment_dir}/secrets.yml" ]; then 
+  credhub login --server https://${BOSH_ENVIRONMENT}:8844 \
+    --username credhub_cli_user \
+    --password $(bosh interpolate ${state_dir}/creds.yml --path /credhub_cli_user_password) \
+    --skip-tls-validation
+  credhub import --file ${deployment_dir}/secrets.yml > /dev/null
+fi
 
-bosh -n deploy -d ${deployment} --vars-file ${deployment_dir}/vars.yml ${deployment_dir}/manifest.yml
+if [ -f "${deployment_dir}/vars.yml" ]; then 
+  vars_flag="--vars-file ${deployment_dir}/vars.yml"
+fi
+
+bosh -n deploy -d ${deployment} ${vars_flag} ${deployment_dir}/manifest.yml
 
 # make it so that you always hit this deployment if you're in it's directory
 
