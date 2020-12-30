@@ -1,0 +1,8 @@
+azs:
+- z1
+- z2
+- z3
+external_url: https://uaa.${LOCAL_SUBDOMAIN}:8443
+network_name: default
+persistent_disk_type: large
+vm_type: default
