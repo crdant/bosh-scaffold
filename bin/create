@@ -5,8 +5,8 @@ patch_dir=${BASEDIR}/patches
 workspace=${HOME}/workspace
 
 internal_ip=$(dig bosh.${LOCAL_SUBDOMAIN} +short)
-interal_gw=$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Usable range" | awk '{print $4}')
-interal_cidr="$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Network address" | awk '{print $4}')/24"
+internal_gw=$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Usable range" | awk '{print $4}')
+internal_cidr="$(sipcalc bosh.${LOCAL_SUBDOMAIN}/24 --resolve | grep "Network address" | awk '{print $4}')/24"
 
 bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   --state ${state_dir}/state.json \
@@ -28,8 +28,8 @@ bosh create-env ${workspace}/bosh-deployment/bosh.yml \
   --vars-store ${state_dir}/creds.yml \
   -v director_name=bosh-lite \
   -v director_hostname=bosh.${LOCAL_SUBDOMAIN} \
-  -v internal_ip=${interal_ip} \
-  -v internal_gw=${interal_gw}\
+  -v internal_ip=${internal_ip} \
+  -v internal_gw=${internal_gw}\
   -v internal_cidr=${internal_cidr} \
   -v outbound_network_name=BoshNetwork
 
