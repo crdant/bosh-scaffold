@@ -6,4 +6,4 @@
 5. Create a directory for your deployment named for the deployment (matching the deployment name in your manifest)
 6. Copy the manifest, releases, and stemcells for your deployment to the deployment directory.
 7. Run `upload <deployment-name>`
-8. Run `deploy <deployment-name`
+8. Run `deploy <deployment-name>`
