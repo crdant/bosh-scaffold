@@ -1,3 +1,5 @@
 state/*
 !state/*.enc
 !state/.gitkeep
+secrets.yml
+*.tgz
