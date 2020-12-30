@@ -1,0 +1,11 @@
+azs:
+- z1
+- z2
+- z3
+uaa_url: https://uaa.plane.local.crdant.io:8443
+external_url: https://plane.local.crdant.io
+database_host: https://db.plane.local.crdant.io
+network_name: default
+persistent_disk_type: large
+vm_type: default
+wildcard_domain: "*.local.crdant.io"
